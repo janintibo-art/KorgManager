@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ES-1 Manager</string>
+    <string name="pick_folder">Choisir le dossier de la carte SmartMedia</string>
+    <string name="show_all_files">Afficher tous les fichiers</string>
+    <string name="status_idle">Aucun dossier sélectionné. Branchez le lecteur de carte puis choisissez le dossier (racine de la carte).</string>
+    <string name="status_error">Impossible de lire ce dossier.</string>
+    <string name="status_count">%1$d fichier(s) affiché(s)</string>
+    <string name="status_badnames">⚠ %1$d sample(s) mal nommé(s) : l\'ES-1 exige 00.WAV à 99.WAV</string>
+    <string name="status_toomany">⚠ %1$d fichiers à la racine : l\'ES-1 n\'en lit que 100 max</string>
+    <string name="type_other">Autre fichier</string>
+    <string name="warn_name">nom non conforme</string>
+    <string name="warn_name_long">⚠ L\'ES-1 ne verra pas ce sample : renommez-le en deux chiffres (ex : 07.WAV).</string>
+    <string name="action_play">▶ Écouter</string>
+    <string name="action_read">Lire le contenu (noms des samples)</string>
+    <string name="action_analyze">Analyser la banque</string>
+    <string name="msg_playing">Lecture : %1$s</string>
+    <string name="msg_play_error">Lecture impossible (format non supporté par Android)</string>
+    <string name="msg_read_error">Lecture du fichier impossible</string>
+    <string name="msg_empty_file">(fichier vide)</string>
+    <string name="bank_valid">✓ Signature KORG valide : banque ES-1 reconnue.</string>
+    <string name="bank_invalid">⚠ Signature KORG absente : ce fichier n\'est pas une banque ES-1 valide (ou est corrompu).</string>
+    <string name="bank_size">Taille : %1$s (une banque ES-1 fait ~3,7 Mo)</string>
+    <string name="bank_explain">Les samples à l\'intérieur d\'une banque .es1 sont stockés dans un format compressé propriétaire Korg, sans noms (l\'ES-1 ne nomme pas ses samples). Ils ne peuvent pas être extraits ni écoutés depuis cette appli.\n\nPour connaître le contenu : chargez la banque dans l\'ES-1 (All Load) et parcourez les samples, ou consultez le fichier names.txt s\'il existe sur la carte. Sur PC, l\'utilitaire Korg « ES-1 to WAV » peut extraire tous les samples d\'une banque en fichiers WAV.</string>
+    <string name="action_extract">Extraire et écouter les samples</string>
+    <string name="action_export">Exporter les WAV vers le dossier</string>
+    <string name="action_close">Fermer</string>
+    <string name="msg_extracting">Extraction des samples en cours…</string>
+    <string name="msg_no_wav">Aucun sample extrait. Sortie du décodeur :</string>
+    <string name="extracted_title">%1$d sample(s) extraits — taper pour écouter</string>
+    <string name="msg_exported">%1$d fichier(s) WAV exportés vers le dossier</string>
+    <string name="msg_no_folder">Choisissez d\'abord un dossier</string>
+    <string name="action_info">Informations</string>
+    <string name="action_rename">Renommer</string>
+    <string name="action_delete">Supprimer</string>
+    <string name="info_body">Type : %1$s\nTaille : %2$s\nModifié : %3$s</string>
+    <string name="info_wav">Format WAV : %1$d Hz, %2$d bits, %3$s</string>
+    <string name="warn_rate">⚠ L\'ES-1 exige 32000 Hz : ce sample sera lu à la mauvaise vitesse ou refusé (Er.4).</string>
+    <string name="warn_bits">⚠ L\'ES-1 n\'accepte que le 8 ou 16 bits.</string>
+    <string name="confirm_delete">Supprimer définitivement %1$s ?</string>
+    <string name="msg_renamed">Fichier renommé</string>
+    <string name="msg_deleted">Fichier supprimé</string>
+    <string name="msg_failed">Échec de l\'opération</string>
+</resources>
