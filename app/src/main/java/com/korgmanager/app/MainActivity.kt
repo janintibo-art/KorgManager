@@ -729,51 +729,75 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
 
+    /**
+     * Fenêtre des samples extraits : chaque ligne a un bouton ▶ pour écouter
+     * et un champ pour nommer le son. « Exporter » écrit les WAV sur la carte
+     * et enregistre tous les noms dans NAMES.TXT.
+     */
     private fun showExtractedList(wavs: List<File>) {
-        val names = wavs.map {
-            "${it.name}  (${Formatter.formatShortFileSize(this, it.length())})"
-        }.toTypedArray()
+        val view = layoutInflater.inflate(R.layout.dialog_samples, null)
+        val container = view.findViewById<android.widget.LinearLayout>(R.id.rowsContainer)
+        val fields = mutableListOf<EditText>()
+        val targetNames = mutableListOf<String>()
+
+        // Numéros de destination : on garde ceux du fichier extrait s'ils sont
+        // au format 00-99, sinon on numérote à la suite.
+        for ((index, w) in wavs.withIndex()) {
+            val base = w.name.substringBeforeLast('.')
+            val target = if (base.length == 2 && base.all { it.isDigit() }) "$base.WAV"
+                         else String.format(Locale.ROOT, "%02d.WAV", index)
+            targetNames.add(target)
+
+            val row = layoutInflater.inflate(R.layout.row_sample, container, false)
+            row.findViewById<TextView>(R.id.fileLabel).text =
+                "$target — ${Formatter.formatShortFileSize(this, w.length())}"
+            val field = row.findViewById<EditText>(R.id.nameField)
+            field.setText(soundNames[target.uppercase(Locale.ROOT)] ?: "")
+            fields.add(field)
+            row.findViewById<Button>(R.id.playBtn).setOnClickListener { playLocalFile(w) }
+            container.addView(row)
+        }
+
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.extracted_title, wavs.size))
-            .setItems(names) { dialog, which ->
-                playLocalFile(wavs[which])
-                dialog.dismiss()
-                showExtractedList(wavs)
+            .setView(view)
+            .setPositiveButton(R.string.action_export) { _, _ ->
+                for (i in wavs.indices) {
+                    val value = fields[i].text.toString().trim()
+                    val key = targetNames[i].uppercase(Locale.ROOT)
+                    if (value.isEmpty()) soundNames.remove(key) else soundNames[key] = value
+                }
+                exportWavs(wavs, targetNames)
             }
-            .setPositiveButton(R.string.action_export) { _, _ -> exportWavs(wavs) }
             .setNegativeButton(R.string.action_close, null)
             .show()
     }
 
-    /** Exporte les WAV extraits vers la carte USB ou le dossier choisi. */
-    private fun exportWavs(wavs: List<File>) {
+    /** Exporte les WAV extraits (renommés 00.WAV…) puis enregistre NAMES.TXT. */
+    private fun exportWavs(wavs: List<File>, targetNames: List<String>) {
+        val progress = AlertDialog.Builder(this)
+            .setMessage(getString(R.string.msg_exporting))
+            .setCancelable(false).create()
+        progress.show()
         Thread {
             var ok = 0
-            val fs = fatFs
-            if (fs != null) {
-                for (w in wavs) {
-                    try { fs.writeFile(w.name, w.readBytes()); ok++ } catch (e: Exception) { /* suivant */ }
+            var error: String? = null
+            try {
+                for (i in wavs.indices) {
+                    writeToDestination(targetNames[i], wavs[i].readBytes())
+                    ok++
                 }
-            } else {
-                val uri = treeUri
-                val dir = uri?.let { DocumentFile.fromTreeUri(this, it) }
-                if (dir == null) {
-                    runOnUiThread { toast(R.string.msg_no_folder) }
-                    return@Thread
-                }
-                for (w in wavs) {
-                    try {
-                        dir.findFile(w.name)?.delete()
-                        val dest = dir.createFile("audio/wav", w.name) ?: continue
-                        contentResolver.openOutputStream(dest.uri)?.use { out ->
-                            w.inputStream().use { it.copyTo(out) }
-                        }
-                        ok++
-                    } catch (e: Exception) { /* suivant */ }
-                }
+                if (soundNames.isNotEmpty()) saveNamesFile()
+            } catch (e: Exception) {
+                error = e.message
             }
+            val done = ok
+            val err = error
             runOnUiThread {
-                Toast.makeText(this, getString(R.string.msg_exported, ok), Toast.LENGTH_LONG).show()
+                progress.dismiss()
+                val msg = if (err == null) getString(R.string.msg_exported, done)
+                          else getString(R.string.msg_exported, done) + "\n" + err
+                Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
                 refresh()
             }
         }.start()
