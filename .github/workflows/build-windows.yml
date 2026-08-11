@@ -1,0 +1,43 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Installer PyInstaller
+        run: pip install pyinstaller
+
+      - name: Compiler le décodeur es12wav
+        shell: bash
+        run: |
+          git clone https://github.com/polluxsynth/es12wav decoder
+          cd decoder
+          gcc -O2 -o ../windows/es12wav.exe *.c || echo "compilation du decodeur ignoree"
+
+      - name: Construire l'exécutable
+        working-directory: windows
+        run: >
+          pyinstaller --onefile --windowed --name "MockTek-Family-Korg"
+          --icon icone.ico
+          --add-data "icone.ico;."
+          --add-binary "es12wav.exe;."
+          mocktek.py
+
+      - name: Publier l'exécutable
+        uses: actions/upload-artifact@v4
+        with:
+          name: MockTek-Windows
+          path: windows/dist/MockTek-Family-Korg.exe

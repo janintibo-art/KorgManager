@@ -5,3 +5,7 @@ local.properties
 .idea/
 app/src/main/cpp/es12wav/
 app/.cxx/
+__pycache__/
+windows/dist/
+windows/build/
+windows/es12wav.exe
