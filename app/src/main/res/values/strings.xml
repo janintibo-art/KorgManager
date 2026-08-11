@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ES-1 Manager</string>
+    <string name="app_name">Mock\'Tek Family Korg</string>
     <string name="pick_folder">Choisir le dossier de la carte SmartMedia</string>
     <string name="show_all_files">Afficher tous les fichiers</string>
     <string name="status_idle">Aucun dossier sélectionné. Branchez le lecteur de carte puis choisissez le dossier (racine de la carte).</string>
