@@ -54,6 +54,7 @@ class MainActivity : AppCompatActivity() {
     private val usbMode: Boolean get() = fatFs != null
 
     private var allItems: List<Item> = emptyList()
+    private var soundNames: MutableMap<String, String> = mutableMapOf()
     private var shown: List<Item> = emptyList()
     private var showAll = false
 
@@ -225,6 +226,7 @@ class MainActivity : AppCompatActivity() {
             Thread {
                 try {
                     val items = fs.list().map { Item(it.name, it.size, null, it) }
+                    soundNames = parseNamesFile(items)
                     val free = fs.freeSpace()
                     runOnUiThread {
                         allItems = items
@@ -252,6 +254,37 @@ class MainActivity : AppCompatActivity() {
             .map { Item(it.name ?: "?", it.length(), it, null) }
             .sortedBy { it.name.lowercase(Locale.ROOT) }
         applyFilter()
+        Thread {
+            soundNames = parseNamesFile(allItems)
+            runOnUiThread { applyFilter() }
+        }.start()
+    }
+
+    /** Lit names.txt (s'il existe) : lignes "00.WAV=nom du son". */
+    private fun parseNamesFile(items: List<Item>): MutableMap<String, String> {
+        val map = mutableMapOf<String, String>()
+        val txt = items.firstOrNull { it.name.equals("names.txt", ignoreCase = true) } ?: return map
+        try {
+            val text = String(readItemBytes(txt), Charsets.ISO_8859_1)
+            for (line in text.lines()) {
+                val l = line.trim()
+                if (l.isEmpty() || l.startsWith("#")) continue
+                val sep = if (l.contains('=')) l.indexOf('=') else l.indexOf(' ')
+                if (sep <= 0) continue
+                val key = l.substring(0, sep).trim().uppercase(Locale.ROOT)
+                val value = l.substring(sep + 1).trim()
+                if (value.isNotEmpty()) map[key] = value
+            }
+        } catch (e: Exception) { /* fichier illisible */ }
+        return map
+    }
+
+    /** Réécrit names.txt sur la carte ou dans le dossier. */
+    private fun saveNamesFile() {
+        val text = soundNames.entries
+            .sortedBy { it.key }
+            .joinToString("\r\n") { "${it.key}=${it.value}" } + "\r\n"
+        writeToDestination("NAMES.TXT", text.toByteArray(Charsets.ISO_8859_1))
     }
 
     private fun extensionOf(name: String): String =
@@ -286,6 +319,9 @@ class MainActivity : AppCompatActivity() {
                 var type = es1Types[extensionOf(it.name)] ?: getString(R.string.type_other)
                 if (isSample(it.name) && !sampleNameOk(it.name)) {
                     type = "⚠ " + getString(R.string.warn_name) + " — " + type
+                }
+                soundNames[it.name.uppercase(Locale.ROOT)]?.let { friendly ->
+                    type = "🏷 $friendly · $type"
                 }
                 v.findViewById<TextView>(android.R.id.text1).text = it.name
                 v.findViewById<TextView>(android.R.id.text2).text =
@@ -322,6 +358,7 @@ class MainActivity : AppCompatActivity() {
             actions.add(getString(R.string.action_play) to { playItem(item) })
             actions.add(getString(R.string.action_convert) to { processItem(item, normalize = false) })
             actions.add(getString(R.string.action_normalize) to { processItem(item, normalize = true) })
+            actions.add(getString(R.string.action_setname) to { setNameDialog(item) })
         }
         if (ext == "txt") {
             actions.add(getString(R.string.action_read) to { showTextFile(item) })
@@ -442,6 +479,36 @@ class MainActivity : AppCompatActivity() {
         return null
     }
 
+    /** Donne un vrai nom au son (stocké dans names.txt, le fichier garde son numéro). */
+    private fun setNameDialog(item: Item) {
+        val key = item.name.uppercase(Locale.ROOT)
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT
+            setText(soundNames[key] ?: "")
+            hint = getString(R.string.setname_hint)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.setname_title, item.name))
+            .setView(input)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val value = input.text.toString().trim()
+                if (value.isEmpty()) soundNames.remove(key) else soundNames[key] = value
+                Thread {
+                    try {
+                        saveNamesFile()
+                        runOnUiThread { toast(R.string.msg_saved); refresh() }
+                    } catch (e: Exception) {
+                        runOnUiThread {
+                            Toast.makeText(this, e.message ?: getString(R.string.msg_failed),
+                                Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }.start()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun renameDialog(item: Item) {
         val input = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_TEXT
@@ -515,7 +582,8 @@ class MainActivity : AppCompatActivity() {
             val dir = treeUri?.let { DocumentFile.fromTreeUri(this, it) }
                 ?: throw java.io.IOException(getString(R.string.msg_no_folder))
             dir.findFile(name)?.delete()
-            val dest = dir.createFile("audio/wav", name)
+            val mime = if (name.uppercase(Locale.ROOT).endsWith(".TXT")) "text/plain" else "audio/wav"
+            val dest = dir.createFile(mime, name)
                 ?: throw java.io.IOException(getString(R.string.msg_failed))
             contentResolver.openOutputStream(dest.uri)?.use { it.write(data) }
         }
