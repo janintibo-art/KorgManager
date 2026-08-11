@@ -302,11 +302,43 @@ class App(tk.Tk):
         self._play_file(path)
 
     def _play_file(self, path):
+        """Joue un WAV. Les samples ES-1 (8 bits, 32 kHz) sont convertis en
+        16 bits dans un fichier temporaire, car winsound les lit mal."""
         try:
             import winsound
-            winsound.PlaySound(path, winsound.SND_FILENAME | winsound.SND_ASYNC)
-        except Exception:
+        except ImportError:
             os.startfile(path)
+            return
+
+        playable = path
+        try:
+            with wave.open(path, "rb") as w:
+                width = w.getsampwidth()
+                if width != 2:
+                    frames = w.readframes(w.getnframes())
+                    channels = w.getnchannels()
+                    rate = w.getframerate()
+                    if width == 1:
+                        # WAV 8 bits = non signé : on décale avant conversion
+                        frames = audioop.bias(frames, 1, -128)
+                    frames = audioop.lin2lin(frames, width, 2)
+                    playable = os.path.join(self.tmpdir, "play.wav")
+                    with wave.open(playable, "wb") as out:
+                        out.setnchannels(channels)
+                        out.setsampwidth(2)
+                        out.setframerate(rate)
+                        out.writeframes(frames)
+        except Exception:
+            playable = path
+
+        try:
+            winsound.PlaySound(None, winsound.SND_PURGE)
+            winsound.PlaySound(playable, winsound.SND_FILENAME | winsound.SND_ASYNC)
+        except Exception:
+            try:
+                os.startfile(playable)
+            except Exception as e:
+                messagebox.showerror(APP_NAME, "Lecture impossible :\n%s" % e)
 
     def name_selected(self):
         name = self._selected()
@@ -489,8 +521,20 @@ class SampleWindow(tk.Toplevel):
             entry.pack(side="left", fill="x", expand=True, padx=6)
             self.fields.append(entry)
 
-        tk.Button(self, text="💾 Exporter sur la carte", command=self.export,
-                  bg=ACCENT, fg=BG, relief="flat", padx=16, pady=8).pack(pady=10)
+        bottom = tk.Frame(self, bg=BG)
+        bottom.pack(pady=10)
+        tk.Button(bottom, text="⏹ Stop", command=self.stop_sound,
+                  bg=PANEL, fg=FG, relief="flat", padx=12, pady=8).pack(side="left", padx=6)
+        tk.Button(bottom, text="💾 Exporter sur la carte", command=self.export,
+                  bg=ACCENT, fg=BG, relief="flat", padx=16, pady=8).pack(side="left", padx=6)
+
+    @staticmethod
+    def stop_sound():
+        try:
+            import winsound
+            winsound.PlaySound(None, winsound.SND_PURGE)
+        except Exception:
+            pass
 
     def export(self):
         try:
