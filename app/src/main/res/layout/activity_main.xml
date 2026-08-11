@@ -36,7 +36,16 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
                 android:text="@string/pick_folder_short" />
+
+            <Button
+                android:id="@+id/addButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="@string/add_button" />
         </LinearLayout>
 
         <Switch

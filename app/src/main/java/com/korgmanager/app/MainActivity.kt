@@ -11,6 +11,8 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
+import android.view.Menu
+import android.view.MenuItem
 import android.text.format.Formatter
 import android.view.View
 import android.view.ViewGroup
@@ -61,6 +63,11 @@ class MainActivity : AppCompatActivity() {
 
     private val usbPermissionAction = "com.korgmanager.app.USB_PERMISSION"
 
+    private val pickAudio =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            if (uri != null) importAudio(uri)
+        }
+
     private val openTree =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             if (uri != null) {
@@ -84,6 +91,10 @@ class MainActivity : AppCompatActivity() {
         statusText = findViewById(R.id.statusText)
         findViewById<Button>(R.id.pickButton).setOnClickListener { openTree.launch(null) }
         findViewById<Button>(R.id.usbButton).setOnClickListener { openUsbCard() }
+        findViewById<Button>(R.id.addButton).setOnClickListener {
+            if (fatFs == null && treeUri == null) toast(R.string.msg_pick_first)
+            else pickAudio.launch("audio/*")
+        }
 
         findViewById<Switch>(R.id.showAllSwitch).setOnCheckedChangeListener { _, checked ->
             showAll = checked
@@ -94,6 +105,13 @@ class MainActivity : AppCompatActivity() {
             showFileMenu(shown[position])
         }
 
+        // Tutoriel au premier lancement
+        val prefs = getPreferences(Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("help_shown", false)) {
+            prefs.edit().putBoolean("help_shown", true).apply()
+            showHelp()
+        }
+
         // Restaurer le dernier dossier choisi
         getPreferences(Context.MODE_PRIVATE).getString("tree", null)?.let { saved ->
             val uri = Uri.parse(saved)
@@ -102,6 +120,24 @@ class MainActivity : AppCompatActivity() {
                 refresh()
             }
         }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.menu_help) { showHelp(); return true }
+        return super.onOptionsItemSelected(item)
+    }
+
+    private fun showHelp() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.app_name)
+            .setMessage(R.string.help_text)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     override fun onDestroy() {
@@ -284,6 +320,8 @@ class MainActivity : AppCompatActivity() {
         val actions = mutableListOf<Pair<String, () -> Unit>>()
         if (isSample(item.name)) {
             actions.add(getString(R.string.action_play) to { playItem(item) })
+            actions.add(getString(R.string.action_convert) to { processItem(item, normalize = false) })
+            actions.add(getString(R.string.action_normalize) to { processItem(item, normalize = true) })
         }
         if (ext == "txt") {
             actions.add(getString(R.string.action_read) to { showTextFile(item) })
@@ -454,6 +492,122 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    // ==================== AJOUT ET CONVERSION DE SONS ====================
+
+    /** Premier nom libre au format ES-1 : 00.WAV à 99.WAV. */
+    private fun nextFreeName(): String? {
+        val used = allItems.map { it.name.substringBeforeLast('.').uppercase(Locale.ROOT) }.toSet()
+        for (n in 0..99) {
+            val base = String.format(Locale.ROOT, "%02d", n)
+            if (base !in used) return "$base.WAV"
+        }
+        return null
+    }
+
+    /** Écrit un fichier sur la carte USB ou dans le dossier choisi. */
+    private fun writeToDestination(name: String, data: ByteArray) {
+        val fs = fatFs
+        if (fs != null) {
+            fs.writeFile(name, data)
+        } else {
+            val dir = treeUri?.let { DocumentFile.fromTreeUri(this, it) }
+                ?: throw java.io.IOException(getString(R.string.msg_no_folder))
+            dir.findFile(name)?.delete()
+            val dest = dir.createFile("audio/wav", name)
+                ?: throw java.io.IOException(getString(R.string.msg_failed))
+            contentResolver.openOutputStream(dest.uri)?.use { it.write(data) }
+        }
+    }
+
+    /** Importe un audio du téléphone, le convertit au format ES-1 et l'écrit. */
+    private fun importAudio(uri: Uri) {
+        val progress = AlertDialog.Builder(this)
+            .setMessage(getString(R.string.msg_converting))
+            .setCancelable(false).create()
+        progress.show()
+        Thread {
+            try {
+                val tmp = File(cacheDir, "import.bin")
+                contentResolver.openInputStream(uri)?.use { input ->
+                    tmp.outputStream().use { input.copyTo(it) }
+                }
+                val decoded = AudioConvert.decode(tmp.absolutePath)
+                tmp.delete()
+                val converted = AudioConvert.resample(decoded, AudioConvert.ES1_RATE)
+                val wav = AudioConvert.toWav(converted)
+                runOnUiThread {
+                    progress.dismiss()
+                    askNameAndSave(wav, converted.durationSec)
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    progress.dismiss()
+                    Toast.makeText(this, getString(R.string.msg_decode_error,
+                        e.message ?: "?"), Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
+    }
+
+    private fun askNameAndSave(wav: ByteArray, durationSec: Double) {
+        val default = nextFreeName()
+        if (default == null) { toast(R.string.msg_no_slot); return }
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT
+            setText(default)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.import_title,
+                Formatter.formatShortFileSize(this, wav.size.toLong()),
+                String.format(Locale.ROOT, "%.1f", durationSec)))
+            .setView(input)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val name = input.text.toString().trim()
+                Thread {
+                    try {
+                        writeToDestination(name, wav)
+                        runOnUiThread { toast(R.string.msg_saved); refresh() }
+                    } catch (e: Exception) {
+                        runOnUiThread {
+                            Toast.makeText(this, e.message ?: getString(R.string.msg_failed),
+                                Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }.start()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** Convertit (32 kHz) ou normalise un sample existant, réécrit sur place. */
+    private fun processItem(item: Item, normalize: Boolean) {
+        val progress = AlertDialog.Builder(this)
+            .setMessage(getString(R.string.msg_converting))
+            .setCancelable(false).create()
+        progress.show()
+        Thread {
+            try {
+                val cached = itemToCache(item)
+                var audio = AudioConvert.decode(cached.absolutePath)
+                audio = AudioConvert.resample(audio, AudioConvert.ES1_RATE)
+                if (normalize) audio = AudioConvert.normalize(audio)
+                val wav = AudioConvert.toWav(audio)
+                writeToDestination(item.name, wav)
+                runOnUiThread {
+                    progress.dismiss()
+                    toast(R.string.msg_saved)
+                    refresh()
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    progress.dismiss()
+                    Toast.makeText(this, getString(R.string.msg_decode_error,
+                        e.message ?: "?"), Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
     }
 
     // ==================== BANQUES .ES1 ====================

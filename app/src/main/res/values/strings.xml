@@ -30,7 +30,7 @@
     <string name="extracted_title">%1$d sample(s) extraits — taper pour écouter</string>
     <string name="msg_exported">%1$d fichier(s) WAV exportés vers le dossier</string>
     <string name="msg_no_folder">Choisissez d\'abord un dossier</string>
-    <string name="usb_button">📀 Carte USB</string>
+    <string name="usb_button">📀 Carte</string>
     <string name="pick_folder_short">📁 Dossier</string>
     <string name="usb_none">Aucun lecteur de carte USB détecté. Branchez-le en OTG puis réessayez.</string>
     <string name="usb_denied">Permission USB refusée</string>
@@ -39,6 +39,17 @@
     <string name="usb_status">Carte %1$s — %2$s libres</string>
     <string name="usb_backup_warn">Carte ouverte en accès direct (%1$s) !\n\nConseil : avant de renommer ou supprimer des fichiers, faites une copie de sauvegarde de la carte (par exemple avec Paragon vers Téléchargements). L\'écriture directe fonctionne, mais une carte SmartMedia d\'époque n\'est jamais à l\'abri d\'une défaillance.</string>
     <string name="info_body_short">Type : %1$s\nTaille : %2$s</string>
+    <string name="add_button">➕ Son</string>
+    <string name="action_convert">Convertir pour ES-1 (32 kHz, 16 bits)</string>
+    <string name="action_normalize">Normaliser le volume</string>
+    <string name="msg_converting">Conversion audio en cours…</string>
+    <string name="msg_decode_error">Conversion impossible : %1$s</string>
+    <string name="msg_saved">Fichier écrit ✓</string>
+    <string name="msg_no_slot">Plus de numéro libre (00 à 99 tous utilisés)</string>
+    <string name="msg_pick_first">Ouvrez d\'abord la carte USB ou choisissez un dossier</string>
+    <string name="import_title">Son converti (%1$s, %2$s s) — nom sur la carte :</string>
+    <string name="help_title">❓ Aide</string>
+    <string name="help_text">🎛 MOCK\'TEK FAMILY KORG\nGestion de la SmartMedia de l\'Electribe ES-1 mkII\n\n1️⃣ OUVRIR LA CARTE\nBranchez le lecteur de carte en USB (OTG), insérez la SmartMedia, puis touchez 📀 Carte. Acceptez la permission USB. L\'appli lit la carte directement (FAT12), même si Android ne la voit pas.\nLe bouton 📁 Dossier permet sinon de travailler sur un dossier du téléphone (ex : Téléchargements).\n\n2️⃣ LES FICHIERS\nTouchez un fichier pour ouvrir son menu :\n• Samples .WAV : ▶ Écouter, Convertir pour ES-1, Normaliser, Renommer, Supprimer\n• Banque .ES1 : Extraire et écouter les samples, puis Exporter en WAV sur la carte\n• names.txt : lire les noms d\'origine des samples\n\n3️⃣ AJOUTER UN SON ➕\nTouchez ➕ Son et choisissez n\'importe quel audio du téléphone (MP3, WAV, FLAC…). Il est converti automatiquement au format ES-1 (32 000 Hz, 16 bits) et écrit sur la carte avec le premier numéro libre.\n\n4️⃣ CÔTÉ ES-1\nSur la machine : mode Sample → Card → Load Sample pour charger un WAV de la carte dans un emplacement, puis All Save pour sauvegarder la banque.\nAll Load charge une banque complète (.es1).\n\n📏 RÈGLES DE L\'ES-1\n• Samples nommés 00.WAV à 99.WAV, à la racine de la carte\n• 32 000 Hz, 8 ou 16 bits (sinon erreur Er.4) — l\'appli signale les fichiers non conformes ⚠\n• 100 fichiers maximum sur la carte\n• ~95 s de mémoire de samples en mono (moitié en stéréo)\n• Formatez toujours la carte dans l\'ES-1, jamais ailleurs\n\n💾 CONSEIL\nAvant de modifier la carte, faites une copie de sauvegarde de son contenu. Les cartes SmartMedia sont anciennes : prudence !</string>
     <string name="action_info">Informations</string>
     <string name="action_rename">Renommer</string>
     <string name="action_delete">Supprimer</string>
