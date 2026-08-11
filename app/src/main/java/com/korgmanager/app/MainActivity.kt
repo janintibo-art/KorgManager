@@ -472,19 +472,22 @@ class MainActivity : AppCompatActivity() {
             try {
                 val bankCopy = File(cacheDir, "bank.ES1")
                 bankCopy.writeBytes(readItemBytes(item))
-                val outDir = File(filesDir, "extracted")
-                outDir.deleteRecursively()
-                outDir.mkdirs()
+                val outBase = File(filesDir, "extracted")
+                outBase.deleteRecursively()
+                outBase.mkdirs()
+                // Le décodeur exige un dossier de sortie qui n'existe pas encore : il le crée
+                val outDir = File(outBase, "out")
                 val exe = File(applicationInfo.nativeLibraryDir, "libes12wav.so")
-                val proc = ProcessBuilder(exe.absolutePath, bankCopy.absolutePath)
-                    .directory(outDir)
+                val proc = ProcessBuilder(exe.absolutePath, bankCopy.absolutePath, outDir.absolutePath)
+                    .directory(outBase)
                     .redirectErrorStream(true)
                     .start()
                 output = proc.inputStream.bufferedReader().readText()
                 proc.waitFor()
                 bankCopy.delete()
-                wavs = (outDir.listFiles()?.toList() ?: emptyList())
-                    .filter { it.name.lowercase(Locale.ROOT).endsWith(".wav") }
+                val searchDir = if (outDir.isDirectory) outDir else outBase
+                wavs = (searchDir.walkTopDown().toList())
+                    .filter { it.isFile && it.name.lowercase(Locale.ROOT).endsWith(".wav") }
                     .sortedBy { it.name }
             } catch (e: Exception) {
                 output += "\n" + (e.message ?: e.toString())
