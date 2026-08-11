@@ -22,19 +22,29 @@ jobs:
 
       - name: Compiler le décodeur es12wav
         shell: bash
+        continue-on-error: true
         run: |
           git clone https://github.com/polluxsynth/es12wav decoder
           cd decoder
-          gcc -O2 -o ../windows/es12wav.exe *.c || echo "compilation du decodeur ignoree"
+          gcc -O2 -o "$GITHUB_WORKSPACE/windows/es12wav.exe" *.c
+          ls -la "$GITHUB_WORKSPACE/windows/"
 
       - name: Construire l'exécutable
+        shell: bash
         working-directory: windows
-        run: >
-          pyinstaller --onefile --windowed --name "MockTek-Family-Korg"
-          --icon icone.ico
-          --add-data "icone.ico;."
-          --add-binary "es12wav.exe;."
-          mocktek.py
+        run: |
+          EXTRA=""
+          if [ -f es12wav.exe ]; then
+            EXTRA="--add-binary es12wav.exe;."
+            echo "Decodeur embarque dans l'exe"
+          else
+            echo "ATTENTION : decodeur non compile, l'exe sera construit sans"
+          fi
+          pyinstaller --onefile --windowed --name "MockTek-Family-Korg" \
+            --icon icone.ico \
+            --add-data "icone.ico;." \
+            $EXTRA \
+            mocktek.py
 
       - name: Publier l'exécutable
         uses: actions/upload-artifact@v4
