@@ -30,6 +30,15 @@
     <string name="extracted_title">%1$d sample(s) extraits — taper pour écouter</string>
     <string name="msg_exported">%1$d fichier(s) WAV exportés vers le dossier</string>
     <string name="msg_no_folder">Choisissez d\'abord un dossier</string>
+    <string name="usb_button">📀 Carte USB</string>
+    <string name="pick_folder_short">📁 Dossier</string>
+    <string name="usb_none">Aucun lecteur de carte USB détecté. Branchez-le en OTG puis réessayez.</string>
+    <string name="usb_denied">Permission USB refusée</string>
+    <string name="usb_opening">Ouverture de la carte…</string>
+    <string name="usb_error">Erreur carte USB : %1$s\n\nVérifiez que la carte est bien insérée dans le lecteur, ou utilisez le mode Dossier.</string>
+    <string name="usb_status">Carte %1$s — %2$s libres</string>
+    <string name="usb_backup_warn">Carte ouverte en accès direct (%1$s) !\n\nConseil : avant de renommer ou supprimer des fichiers, faites une copie de sauvegarde de la carte (par exemple avec Paragon vers Téléchargements). L\'écriture directe fonctionne, mais une carte SmartMedia d\'époque n\'est jamais à l\'abri d\'une défaillance.</string>
+    <string name="info_body_short">Type : %1$s\nTaille : %2$s</string>
     <string name="action_info">Informations</string>
     <string name="action_rename">Renommer</string>
     <string name="action_delete">Supprimer</string>
