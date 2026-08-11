@@ -25,8 +25,13 @@ jobs:
         continue-on-error: true
         run: |
           git clone https://github.com/polluxsynth/es12wav decoder
+          cp windows/patch_decoder.py decoder/
           cd decoder
-          gcc -O2 -o "$GITHUB_WORKSPACE/windows/es12wav.exe" *.c
+          python patch_decoder.py
+          echo "=== appels mkdir apres patch ==="
+          grep -n "mkdir" *.c || true
+          echo "=== compilation ==="
+          gcc -O2 -w -o "$GITHUB_WORKSPACE/windows/es12wav.exe" *.c
           ls -la "$GITHUB_WORKSPACE/windows/"
 
       - name: Construire l'exécutable
