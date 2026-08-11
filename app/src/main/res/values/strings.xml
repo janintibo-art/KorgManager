@@ -21,7 +21,7 @@
     <string name="bank_valid">✓ Signature KORG valide : banque ES-1 reconnue.</string>
     <string name="bank_invalid">⚠ Signature KORG absente : ce fichier n\'est pas une banque ES-1 valide (ou est corrompu).</string>
     <string name="bank_size">Taille : %1$s (une banque ES-1 fait ~3,7 Mo)</string>
-    <string name="bank_explain">Les samples à l\'intérieur d\'une banque .es1 sont stockés dans un format compressé propriétaire Korg, sans noms (l\'ES-1 ne nomme pas ses samples). Ils ne peuvent pas être extraits ni écoutés depuis cette appli.\n\nPour connaître le contenu : chargez la banque dans l\'ES-1 (All Load) et parcourez les samples, ou consultez le fichier names.txt s\'il existe sur la carte. Sur PC, l\'utilitaire Korg « ES-1 to WAV » peut extraire tous les samples d\'une banque en fichiers WAV.</string>
+    <string name="bank_explain">Les samples à l\'intérieur d\'une banque .es1 sont stockés dans un format compressé propriétaire Korg, sans noms (l\'ES-1 ne nomme pas ses samples).\n\n👉 Pour les écouter : utilisez l\'option « Extraire et écouter les samples » de cette appli. Vous pourrez ensuite les exporter en WAV sur la carte.</string>
     <string name="action_extract">Extraire et écouter les samples</string>
     <string name="action_export">Exporter les WAV vers le dossier</string>
     <string name="action_close">Fermer</string>
