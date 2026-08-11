@@ -21,6 +21,7 @@ class UsbCardReader(private val manager: UsbManager, private val device: UsbDevi
     private var inEp: UsbEndpoint? = null
     private var outEp: UsbEndpoint? = null
     private var tag = 1
+    private var activeLun = 0
     var blockSize = 512
         private set
     var blockCount = 0L
@@ -57,15 +58,41 @@ class UsbCardReader(private val manager: UsbManager, private val device: UsbDevi
         inEp = epIn
         outEp = epOut
 
-        // Attendre que la carte soit prête
-        var ready = false
-        for (attempt in 0 until 20) {
-            if (testUnitReady()) { ready = true; break }
-            requestSense()
-            Thread.sleep(150)
+        // Les lecteurs multi-cartes exposent plusieurs emplacements (LUN) :
+        // on les teste tous jusqu'à trouver celui qui contient la carte.
+        val maxLun = getMaxLun()
+        var found = false
+        outer@ for (lun in 0..maxLun) {
+            activeLun = lun
+            for (attempt in 0 until 6) {
+                if (testUnitReady()) {
+                    try {
+                        readCapacity()
+                        if (blockCount > 0) { found = true; break@outer }
+                    } catch (e: Exception) { /* emplacement vide */ }
+                }
+                requestSense()
+                Thread.sleep(120)
+            }
         }
-        if (!ready) throw IOException("Carte non détectée dans le lecteur")
-        readCapacity()
+        if (!found) {
+            throw IOException("Aucune carte trouvée dans le lecteur (${maxLun + 1} emplacement(s) testé(s))")
+        }
+    }
+
+    private fun getMaxLun(): Int {
+        val conn = connection ?: return 0
+        val intf = usbInterface ?: return 0
+        val buf = ByteArray(1)
+        val n = conn.controlTransfer(0xA1, 0xFE, 0, intf.id, buf, 1, 2000)
+        return if (n == 1) (buf[0].toInt() and 0xFF).coerceIn(0, 15) else 0
+    }
+
+    private fun clearStall(ep: UsbEndpoint?) {
+        if (ep == null) return
+        try {
+            connection?.controlTransfer(0x02, 0x01, 0, ep.address, null, 0, 2000)
+        } catch (e: Exception) { /* ignore */ }
     }
 
     fun close() {
@@ -81,9 +108,13 @@ class UsbCardReader(private val manager: UsbManager, private val device: UsbDevi
     private fun bulkOut(data: ByteArray, length: Int) {
         val conn = connection ?: throw IOException("USB fermé")
         var sent = 0
+        var retried = false
         while (sent < length) {
             val n = conn.bulkTransfer(outEp, data.copyOfRange(sent, length), length - sent, 5000)
-            if (n < 0) throw IOException("Erreur d'écriture USB")
+            if (n < 0) {
+                if (!retried) { retried = true; clearStall(outEp); continue }
+                throw IOException("Erreur d'écriture USB")
+            }
             sent += n
         }
     }
@@ -92,10 +123,14 @@ class UsbCardReader(private val manager: UsbManager, private val device: UsbDevi
         val conn = connection ?: throw IOException("USB fermé")
         val out = ByteArray(length)
         var got = 0
+        var retried = false
         while (got < length) {
             val buf = ByteArray(length - got)
             val n = conn.bulkTransfer(inEp, buf, buf.size, 5000)
-            if (n < 0) throw IOException("Erreur de lecture USB")
+            if (n < 0) {
+                if (!retried) { retried = true; clearStall(inEp); continue }
+                throw IOException("Erreur de lecture USB")
+            }
             System.arraycopy(buf, 0, out, got, n)
             got += n
         }
@@ -110,7 +145,7 @@ class UsbCardReader(private val manager: UsbManager, private val device: UsbDevi
         putLe32(cbw, 4, myTag)
         putLe32(cbw, 8, dataLen)
         cbw[12] = if (dataOut == null && dataInLen > 0) 0x80.toByte() else 0x00
-        cbw[13] = 0 // LUN
+        cbw[13] = activeLun.toByte()
         cbw[14] = cb.size.toByte()
         System.arraycopy(cb, 0, cbw, 15, cb.size)
         bulkOut(cbw, 31)
